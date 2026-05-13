@@ -1100,23 +1100,13 @@ class TestRetrievalVariantRegistry:
         variant = resolve_variant("AllTools")
         assert variant.name == "alltools"
 
-    def test_resolve_variant_alltools_dense_kwargs(self):
+    def test_resolve_variant_alltools_qwen(self):
         from tau2.domains.banking_knowledge.retrieval import resolve_variant
 
-        variant = resolve_variant(
-            "alltools",
-            alltools_dense_embedding_provider="openrouter",
-            alltools_dense_embedding_model="custom-qwen-model",
-        )
+        variant = resolve_variant("alltools-qwen")
         assert variant.kb_search_dense is not None
         assert variant.kb_search_dense.embedder_type == "openrouter"
-        assert variant.kb_search_dense.embedder_model == "custom-qwen-model"
-
-    def test_resolve_variant_alltools_rejects_unknown_dense_provider(self):
-        from tau2.domains.banking_knowledge.retrieval import resolve_variant
-
-        with pytest.raises(ValueError, match="alltools_dense_embedding_provider"):
-            resolve_variant("alltools", alltools_dense_embedding_provider="unknown")
+        assert variant.kb_search_dense.embedder_model == "qwen3-embedding-8b"
 
     def test_bm25_variant(self):
         from tau2.domains.banking_knowledge.retrieval import resolve_variant
@@ -1144,30 +1134,26 @@ class TestAllToolsEmbedderWarmupMapping:
         configs = get_unique_embedder_configs_for_retrieval_configs(["alltools"])
         assert configs == [("openai", {"model": "text-embedding-3-large"})]
 
-    def test_unique_embedder_config_alltools_openrouter_kwargs(self):
+    def test_unique_embedder_config_alltools_qwen(self):
         from tau2.knowledge.embeddings_cache import (
             get_unique_embedder_configs_for_retrieval_configs,
         )
 
-        configs = get_unique_embedder_configs_for_retrieval_configs(
-            ["alltools"],
-            {"alltools_dense_embedding_provider": "openrouter"},
-        )
+        configs = get_unique_embedder_configs_for_retrieval_configs(["alltools-qwen"])
         assert configs == [("openrouter", {"model": "qwen3-embedding-8b"})]
 
-    def test_unique_embedder_config_alltools_custom_model(self):
+    def test_unique_embedder_config_alltools_variants_dedupe(self):
         from tau2.knowledge.embeddings_cache import (
             get_unique_embedder_configs_for_retrieval_configs,
         )
 
         configs = get_unique_embedder_configs_for_retrieval_configs(
-            ["alltools"],
-            {
-                "alltools_dense_embedding_provider": "openrouter",
-                "alltools_dense_embedding_model": "custom-qwen-model",
-            },
+            ["alltools", "AllTools", "alltools-qwen"],
         )
-        assert configs == [("openrouter", {"model": "custom-qwen-model"})]
+        assert configs == [
+            ("openai", {"model": "text-embedding-3-large"}),
+            ("openrouter", {"model": "qwen3-embedding-8b"}),
+        ]
 
     def test_unique_embedder_config_all_tools_alias(self):
         from tau2.knowledge.embeddings_cache import (
